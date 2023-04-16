@@ -148,9 +148,6 @@ export class NextJsApp extends Construct {
       this,
       "NextJsServerLambda",
       {
-        currentVersionOptions: {
-          provisionedConcurrentExecutions: 1,
-        },
         runtime: LAMBDA_RUNTIME,
         timeout: cdk.Duration.seconds(29),
         layers: [
@@ -171,8 +168,6 @@ export class NextJsApp extends Construct {
         },
       }
     );
-
-    serverLambda.currentVersion;
 
     const imageLambda = new lambdaNode.NodejsFunction(
       this,
