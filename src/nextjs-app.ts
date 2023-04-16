@@ -166,7 +166,7 @@ export class NextJsApp extends Construct {
           externalModules: [
             LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
             ...this.stackProps.nextLayerVersion.packagedDependencies,
-            "/opt/.next/required-server-files.json",
+            "/opt/.next/*",
           ],
         },
       }
