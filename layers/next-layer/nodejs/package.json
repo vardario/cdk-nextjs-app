@@ -1,0 +1,10 @@
+{
+  "name": "@gys/nextjs-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "next": "^13.3.0"
+  },
+  "scripts": {
+    "postinstall": "node post-install.js"
+  }
+}
