@@ -65,26 +65,12 @@ export interface NextJsAppProps {
    * underlying CloudFront distribution.
    * @see NextJsAppDomain for more details.
    */
-  domain: NextJsAppDomain;
+  domain?: NextJsAppDomain;
 
   /**
-   * Name of the underlying bucket which stores the
-   * NextJS build. If @see domain is defined, the name
-   * of the bucket will be set to @see domain.name
-   * which is required by S3
-   * @see https://docs.aws.amazon.com/AmazonS3/latest/userguide/website-hosting-custom-domain-walkthrough.html#root-domain-walkthrough-create-buckets
+   * TODO:
    */
-  bucketName?: string;
-
-  /**
-   * Npm Layer which hold all next deps
-   */
-  nextLayerVersion: NpmLayerVersion;
-
-  /**
-   * Npm Layer which holds sharp deps.
-   */
-  sharpLayerVersion: NpmLayerVersion;
+  provisionedConcurrentExecutions?: number;
 
   /**
    *
@@ -96,9 +82,12 @@ export class NextJsApp extends Construct {
   private readonly stackProps: NextJsAppProps;
   private readonly buildId: string;
   public readonly appUrl: string;
+  public readonly cloudFrontUrl: string;
 
   constructor(scope: Construct, id: string, stackProps: NextJsAppProps) {
     super(scope, id);
+
+    this.stackProps = stackProps;
 
     if (!fs.existsSync(stackProps.nextJsPath)) {
       throw new Error("Next build folder not found. Did you forgot to build ?");
@@ -108,20 +97,38 @@ export class NextJsApp extends Construct {
       .readFileSync(path.resolve(stackProps.nextJsPath, ".next/BUILD_ID"))
       .toString("utf-8");
 
-    stackProps.bucketName =
-      (stackProps.domain && stackProps.domain.name) || stackProps.bucketName;
-    this.stackProps = stackProps;
-
-    const staticAssetsBucket = this.createStaticAssetsBucket();
+    const staticAssetsBucket = this.createStaticAssetsBucket(
+      (stackProps.domain && stackProps.domain.name) || undefined
+    );
     const api = this.createNextServer(staticAssetsBucket);
-    this.createCloudFrontDistribution(staticAssetsBucket, api);
+    const cloudfrontDistribution = this.createCloudFrontDistribution(
+      staticAssetsBucket,
+      api
+    );
 
+    this.cloudFrontUrl = `https://${cloudfrontDistribution.domainName}`;
     this.appUrl =
       (this.stackProps.domain && `https://${this.stackProps.domain.name}`) ||
-      staticAssetsBucket.bucketWebsiteUrl;
+      this.cloudFrontUrl;
   }
 
   private createNextServer(staticAssetsBucket: s3.Bucket) {
+    const nextLayer = new NpmLayerVersion(this, "LayerNext", {
+      layerPath: path.resolve(__dirname, "../layers/next-layer"),
+      layerVersionProps: {
+        compatibleArchitectures: [lambda.Architecture.ARM_64],
+        compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
+      },
+    });
+
+    const sharpLayer = new NpmLayerVersion(this, "LayerSharp", {
+      layerPath: path.resolve(__dirname, "../layers/sharp-layer"),
+      layerVersionProps: {
+        compatibleArchitectures: [lambda.Architecture.ARM_64],
+        compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
+      },
+    });
+
     const serverLayerVersion = new lambda.LayerVersion(
       this,
       "NextJsDeploymentLayer",
@@ -139,6 +146,7 @@ export class NextJsApp extends Construct {
             "public",
             "/*.js",
             "/*.json",
+            "node_modules",
           ],
         }),
       }
@@ -148,12 +156,15 @@ export class NextJsApp extends Construct {
       this,
       "NextJsServerLambda",
       {
+        currentVersionOptions: this.stackProps.provisionedConcurrentExecutions
+          ? {
+              provisionedConcurrentExecutions:
+                this.stackProps.provisionedConcurrentExecutions,
+            }
+          : undefined,
         runtime: LAMBDA_RUNTIME,
         timeout: cdk.Duration.seconds(29),
-        layers: [
-          serverLayerVersion,
-          this.stackProps.nextLayerVersion.layerVersion,
-        ],
+        layers: [serverLayerVersion, nextLayer.layerVersion],
         memorySize: 512,
         entry: path.resolve(__dirname, "next-server-handler.js"),
         environment: this.stackProps.nextServerEnvironment,
@@ -162,7 +173,7 @@ export class NextJsApp extends Construct {
           target: LAMBDA_ESBUILD_TARGET,
           externalModules: [
             LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
-            ...this.stackProps.nextLayerVersion.packagedDependencies,
+            ...nextLayer.packagedDependencies,
             "/opt/.next/*",
           ],
         },
@@ -177,8 +188,8 @@ export class NextJsApp extends Construct {
         timeout: cdk.Duration.seconds(29),
         layers: [
           serverLayerVersion,
-          this.stackProps.nextLayerVersion.layerVersion,
-          this.stackProps.sharpLayerVersion.layerVersion,
+          nextLayer.layerVersion,
+          sharpLayer.layerVersion,
         ],
         environment: {
           NEXT_BUILD_BUCKET: staticAssetsBucket.bucketName,
@@ -237,14 +248,13 @@ export class NextJsApp extends Construct {
     return api;
   }
 
-  private createStaticAssetsBucket() {
+  private createStaticAssetsBucket(bucketName?: string) {
     const distPath = path.resolve(this.stackProps.nextJsPath, ".next");
     const staticPath = path.resolve(distPath, "static");
     const publicPath = path.resolve(this.stackProps.nextJsPath, "public");
 
     const staticAssetsBucket = new s3.Bucket(this, `NextJsStaticAssets`, {
-      bucketName: this.stackProps.bucketName,
-      encryption: s3.BucketEncryption.UNENCRYPTED,
+      bucketName: bucketName,
       websiteIndexDocument: "index.html",
       websiteErrorDocument: "404.html",
       publicReadAccess: true,
@@ -257,6 +267,9 @@ export class NextJsApp extends Construct {
       destinationKeyPrefix: "_next/static",
       sources: [s3d.Source.asset(staticPath)],
       prune: false,
+      cacheControl: [
+        s3d.CacheControl.fromString("public, max-age=315360000, immutable"),
+      ],
     });
 
     new s3d.BucketDeployment(this, "NextJsPublicAssetsDeployment", {
@@ -323,6 +336,7 @@ export class NextJsApp extends Construct {
         ),
         enableAcceptEncodingGzip: true,
         enableAcceptEncodingBrotli: true,
+        defaultTtl: cdk.Duration.days(365),
       }
     );
 
@@ -391,13 +405,8 @@ export class NextJsApp extends Construct {
       destinationKeyPrefix: "/",
       sources: [s3d.Source.data("BUILD_ID", this.buildId)],
       prune: false,
-      /**
-       * TODO: Fine tune caching and rethink about cache CloudFront invalidation
-       * @see https://github.com/GetYourSportsDE/gys-next/issues/128
-       *
-       * distribution: cloudfrontDistribution,
-       * distributionPaths: ['/*'],
-       */
+      distribution: cloudfrontDistribution,
+      distributionPaths: ["/*"],
     });
 
     this.stackProps.domain &&

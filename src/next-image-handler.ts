@@ -64,6 +64,7 @@ export const handler = slsHttp(
 
     res.setHeader('Vary', 'Accept');
     res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Cache-Control','public, max-age=315360000, immutable')
     res.statusCode = 200;
     res.write(result.buffer, 'binary');
     res.end();

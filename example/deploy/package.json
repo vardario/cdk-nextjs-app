@@ -1,0 +1,33 @@
+{
+  "name": "deploy",
+  "version": "0.1.0",
+  "bin": {
+    "deploy": "bin/deploy.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "deploy": "cdk deploy --outputs-file ./cdk.outputs.json",
+    "destroy": "cdk destroy",
+    "synth": "cdk synth"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.5.2",
+    "@types/node": "10.17.27",
+    "@types/prettier": "2.6.0",
+    "aws-cdk": "^2.74.0",
+    "jest": "^27.5.1",
+    "ts-jest": "^27.1.4",
+    "ts-node": "^10.9.1",
+    "typescript": "~3.9.7"
+  },
+  "dependencies": {
+    "@apimda/deploy-cdk": "^0.1.2",
+    "@apimda/runtime": "^0.1.2",
+    "aws-cdk-lib": "^2.74.0",
+    "constructs": "^10.1.313",
+    "esbuild": "^0.17.17",
+    "source-map-support": "^0.5.21"
+  }
+}
