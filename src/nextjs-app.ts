@@ -73,6 +73,11 @@ export interface NextJsAppProps {
   provisionedConcurrentExecutions?: number;
 
   /**
+   * TODO:
+   */
+  allowedCacheHeaders?: string[];
+
+  /**
    *
    */
   readonly nextServerEnvironment?: Record<string, string>;
@@ -327,12 +332,7 @@ export class NextJsApp extends Construct {
         cookieBehavior: cf.CacheCookieBehavior.none(),
         headerBehavior: cf.CacheHeaderBehavior.allowList(
           "RSC",
-          "accept",
-          "accept-language",
-          "content-language",
-          "content-type",
-          "user-agent",
-          "authorization"
+          ...(this.stackProps.allowedCacheHeaders || [])
         ),
         enableAcceptEncodingGzip: true,
         enableAcceptEncodingBrotli: true,
