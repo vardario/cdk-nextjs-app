@@ -260,9 +260,6 @@ export class NextJsApp extends Construct {
 
     const staticAssetsBucket = new s3.Bucket(this, `NextJsStaticAssets`, {
       bucketName: bucketName,
-      websiteIndexDocument: "index.html",
-      websiteErrorDocument: "404.html",
-      publicReadAccess: true,
       autoDeleteObjects: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
@@ -290,12 +287,7 @@ export class NextJsApp extends Construct {
     staticAssetsBucket: s3.Bucket,
     api: apigw.HttpApi
   ) {
-    const staticOrigin = new cfo.HttpOrigin(
-      staticAssetsBucket.bucketWebsiteDomainName,
-      {
-        protocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
-      }
-    );
+    const staticOrigin = new cfo.S3Origin(staticAssetsBucket);
 
     const apiDomain = `${api.apiId}.execute-api.${
       Stack.of(this).region
