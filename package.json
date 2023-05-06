@@ -1,8 +1,11 @@
 {
   "name": "@vardario/cdk-nextjs-app",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "",
   "main": "lib/index.js",
+  "files": [
+    "/lib"
+  ],
   "scripts": {
     "test": "jest",
     "build": "tsc --build",
