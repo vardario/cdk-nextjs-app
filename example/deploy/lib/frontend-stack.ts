@@ -2,7 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as path from "path";
 
-import { NextJsApp } from "../../../lib";
+import { NextJsApp } from "@vardario/cdk-nextjs-app";
 
 export class FrontendStack extends cdk.Stack {
   public nextJsApp: NextJsApp;
