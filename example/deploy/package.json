@@ -28,5 +28,5 @@
     "esbuild": "^0.17.17",
     "source-map-support": "^0.5.21"
   },
-  "private": false
+  "private": true
 }
