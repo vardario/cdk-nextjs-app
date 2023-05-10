@@ -1,4 +1,4 @@
-import { NpmLayerVersion } from "@apimda/deploy-cdk";
+import { NpmLayerVersion } from "@apimda/npm-layer-version";
 
 import { Stack } from "aws-cdk-lib";
 import { Construct } from "constructs";
