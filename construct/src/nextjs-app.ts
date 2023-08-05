@@ -79,9 +79,21 @@ export interface NextJsAppProps {
   allowedCacheHeaders?: string[];
 
   /**
-   *
+   * TODO:
    */
   readonly nextServerEnvironment?: Record<string, string>;
+
+  /**
+   * Path to a @NpmLayerVersion compatible directory,
+   * which includes a package.json file with all needed packages.
+   */
+  nextAppLayerPath?: string;
+
+  /**
+   * Path to a @NpmLayerVersion compatible directory,
+   * which includes a package.json file with all needed packages.
+   */
+  sharpLayerPath?: string;
 }
 
 export class NextJsApp extends Construct {
@@ -120,7 +132,9 @@ export class NextJsApp extends Construct {
 
   private createNextServer(staticAssetsBucket: s3.Bucket) {
     const nextLayer = new NpmLayerVersion(this, "LayerNext", {
-      layerPath: path.resolve(__dirname, "../layers/next-layer"),
+      layerPath:
+        this.stackProps.nextAppLayerPath ||
+        path.resolve(__dirname, "../layers/next-layer"),
       layerVersionProps: {
         compatibleArchitectures: [LAMBDA_ARCHITECTURE],
         compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
@@ -128,7 +142,9 @@ export class NextJsApp extends Construct {
     });
 
     const sharpLayer = new NpmLayerVersion(this, "LayerSharp", {
-      layerPath: path.resolve(__dirname, "../layers/sharp-layer"),
+      layerPath:
+        this.stackProps.sharpLayerPath ||
+        path.resolve(__dirname, "../layers/sharp-layer"),
       layerVersionProps: {
         compatibleArchitectures: [LAMBDA_ARCHITECTURE],
         compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
