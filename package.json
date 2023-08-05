@@ -1,34 +1,18 @@
 {
-  "name": "@vardario/cdk-nextjs-app",
-  "version": "0.1.7",
+  "name": "root",
+  "version": "0.1.8",
   "description": "",
-  "main": "lib/index.js",
-  "files": [
-    "/lib"
-  ],
+  "private": true,
   "scripts": {
-    "build": "tsc --build",
-    "watch": "tsc --build --watch"
+    "build": "pnpm --filter @vardario/cdk-nextjs-app run build && pnpm -r build",
+    "repo-clean": "git clean -xdf -e .env",
+    "test": "pnpm -r test"
   },
   "author": "Sahin Vardar",
   "license": "MIT",
-  "dependencies": {
-    "@apimda/npm-layer-version": "^1.0.0",
-    "@aws-cdk/aws-apigatewayv2-alpha": "^2.67.0-alpha.0",
-    "@aws-cdk/aws-apigatewayv2-integrations-alpha": "^2.67.0-alpha.0",
-    "@aws-sdk/client-s3": "3.188.0",
-    "aws-cdk-lib": "^2.78.0",
-    "constructs": "^10.2.17",
-    "next": "^13.3.0",
-    "serverless-http": "^3.2.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.1.2",
-    "typescript": "^5.0.4"
-  },
+  "packageManager": "pnpm@8.6.0",
   "repository": {
     "type": "git",
-    "url": "git@github.com:vardario/cdk-react-app.git"
-  },
-  "packageManager": "pnpm@8.3.1"
+    "url": "git@github.com:vardario/cdk-svelte-app.git"
+  }
 }

@@ -1,15 +1,15 @@
 {
   "name": "deploy",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "bin": {
     "deploy": "bin/deploy.js"
   },
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",    
-    "deploy": "cdk deploy --outputs-file ./cdk.outputs.json",
-    "destroy": "cdk destroy",
-    "synth": "cdk synth"
+    "cdk-deploy": "cdk deploy --outputs-file ./cdk.outputs.json",
+    "cdk-destroy": "cdk destroy",
+    "cdk-synth": "cdk synth"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",
