@@ -1,10 +1,11 @@
 {
   "name": "@vardario/cdk-nextjs-app",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "",
   "main": "lib/index.js",
   "files": [
-    "/lib"
+    "/lib",
+    "/layers"
   ],
   "scripts": {
     "test": "vitest run",
