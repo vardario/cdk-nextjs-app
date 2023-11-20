@@ -69,17 +69,17 @@ export interface NextJsAppProps {
   domain?: NextJsAppDomain;
 
   /**
-   * TODO:
+   * Provisioned concurrent executions for the NextJS server lambda.
    */
   provisionedConcurrentExecutions?: number;
 
   /**
-   * TODO:
+   * Allowed cache headers for the NextJS server lambda.
    */
   allowedCacheHeaders?: string[];
 
   /**
-   * TODO:
+   * NextJS server environment variables
    */
   readonly nextServerEnvironment?: Record<string, string>;
 
@@ -94,6 +94,11 @@ export interface NextJsAppProps {
    * which includes a package.json file with all needed packages.
    */
   sharpLayerPath?: string;
+
+  /**
+   * Here you can define additional paths which should be cached by CloudFront.
+   */
+  additionalCachingPaths?: string[];
 }
 
 export class NextJsApp extends Construct {
@@ -303,6 +308,47 @@ export class NextJsApp extends Construct {
       defaultTtl: cdk.Duration.days(30)
     });
 
+    const additionalBehaviors: Record<string, cf.BehaviorOptions> = {
+      '/_next/static/*': {
+        origin: staticOrigin,
+        cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+      },
+      '/_next/image': {
+        origin: nextImageOrigin,
+        cachePolicy: nextImageCachePolicy,
+        compress: true
+      },
+      '/favicon.ico': {
+        origin: staticOrigin,
+        cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+      },
+      '/logo192.png': {
+        origin: staticOrigin,
+        cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+      },
+      '/manifest.json': {
+        origin: staticOrigin,
+        cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+      },
+      '/robot.txt': {
+        origin: staticOrigin,
+        cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+      }
+    };
+
+    this.stackProps.additionalCachingPaths?.forEach(path => {
+      additionalBehaviors[path] = {
+        origin: staticOrigin,
+        cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+      };
+    });
+
     const cloudfrontDistribution = new cf.Distribution(this, 'NextJsCloudfrontDistribution', {
       domainNames,
       certificate,
@@ -314,38 +360,7 @@ export class NextJsApp extends Construct {
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: nextServerCachePolicy
       },
-      additionalBehaviors: {
-        '/_next/static/*': {
-          origin: staticOrigin,
-          cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
-          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
-        },
-        '/_next/image': {
-          origin: nextImageOrigin,
-          cachePolicy: nextImageCachePolicy,
-          compress: true
-        },
-        '/favicon.ico': {
-          origin: staticOrigin,
-          cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
-        },
-        '/logo192.png': {
-          origin: staticOrigin,
-          cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
-        },
-        '/manifest.json': {
-          origin: staticOrigin,
-          cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
-        },
-        '/robot.txt': {
-          origin: staticOrigin,
-          cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
-        }
-      }
+      additionalBehaviors
     });
 
     new s3d.BucketDeployment(this, 'NextJsInvalidationDeployment', {

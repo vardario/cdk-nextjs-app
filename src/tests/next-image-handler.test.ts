@@ -11,9 +11,8 @@ import { StorageTestContext } from './storage-test-context';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 
-const testImage = fs.readFileSync(path.resolve(__dirname, '../assets/test.jpg'));
-
-const requiredServerFilesPath = path.resolve(__dirname, './test/required-server-files.json');
+const testImage = fs.readFileSync(path.resolve(__dirname, './assets/test.jpg'));
+const requiredServerFilesPath = path.resolve(__dirname, './required-server-files.json');
 
 const mockImageDownloadHandler: NextJsImageDownloadHandler = async (_: IncomingMessage, res: ServerResponse) => {
   res.statusCode = 200;
@@ -77,7 +76,7 @@ describe('NextJs Image Lambda', async () => {
   });
 
   test('s3 download handler', async () => {
-    const testImage = fs.readFileSync(path.resolve(__dirname, '../assets/test.jpg'));
+    const testImage = fs.readFileSync(path.resolve(__dirname, './assets/test.jpg'));
 
     await context.s3Client.send(
       new PutObjectCommand({
