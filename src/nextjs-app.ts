@@ -1,32 +1,32 @@
-import { NpmLayerVersion } from "@apimda/npm-layer-version";
+import { NpmLayerVersion } from '@apimda/npm-layer-version';
 
-import { Stack } from "aws-cdk-lib";
-import { Construct } from "constructs";
-import fs from "fs";
-import * as path from "path";
+import { Stack } from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import fs from 'fs';
+import * as path from 'path';
 
-import * as cdk from "aws-cdk-lib";
-import * as cf from "aws-cdk-lib/aws-cloudfront";
-import * as cfo from "aws-cdk-lib/aws-cloudfront-origins";
-import * as cm from "aws-cdk-lib/aws-certificatemanager";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as lambdaNode from "aws-cdk-lib/aws-lambda-nodejs";
-import * as r53 from "aws-cdk-lib/aws-route53";
-import * as r53t from "aws-cdk-lib/aws-route53-targets";
-import * as s3 from "aws-cdk-lib/aws-s3";
-import * as s3d from "aws-cdk-lib/aws-s3-deployment";
-import * as apigw from "@aws-cdk/aws-apigatewayv2-alpha";
-import * as apigwInt from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
+import * as cdk from 'aws-cdk-lib';
+import * as cf from 'aws-cdk-lib/aws-cloudfront';
+import * as cfo from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as cm from 'aws-cdk-lib/aws-certificatemanager';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaNode from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as r53 from 'aws-cdk-lib/aws-route53';
+import * as r53t from 'aws-cdk-lib/aws-route53-targets';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3d from 'aws-cdk-lib/aws-s3-deployment';
+import * as apigw from '@aws-cdk/aws-apigatewayv2-alpha';
+import * as apigwInt from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 
 import {
   LAMBDA_ARCHITECTURE,
   LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
   LAMBDA_ESBUILD_TARGET,
-  LAMBDA_RUNTIME,
-} from "./stack-utils";
+  LAMBDA_RUNTIME
+} from './stack-utils';
 
-const SERVER_ENDPOINT = "/server";
-const IMAGE_ENDPOINT = "/image";
+const SERVER_ENDPOINT = '/server';
+const IMAGE_ENDPOINT = '/image';
 
 export interface NextJsAppDomain {
   /**
@@ -108,326 +108,260 @@ export class NextJsApp extends Construct {
     this.stackProps = stackProps;
 
     if (!fs.existsSync(stackProps.nextJsPath)) {
-      throw new Error("Next build folder not found. Did you forgot to build ?");
+      throw new Error('Next build folder not found. Did you forgot to build ?');
     }
 
-    this.buildId = fs
-      .readFileSync(path.resolve(stackProps.nextJsPath, ".next/BUILD_ID"))
-      .toString("utf-8");
+    this.buildId = fs.readFileSync(path.resolve(stackProps.nextJsPath, '.next/BUILD_ID')).toString('utf-8');
 
     const staticAssetsBucket = this.createStaticAssetsBucket(
       (stackProps.domain && stackProps.domain.name) || undefined
     );
     const api = this.createNextServer(staticAssetsBucket);
-    const cloudfrontDistribution = this.createCloudFrontDistribution(
-      staticAssetsBucket,
-      api
-    );
+    const cloudfrontDistribution = this.createCloudFrontDistribution(staticAssetsBucket, api);
 
     this.cloudFrontUrl = `https://${cloudfrontDistribution.domainName}`;
-    this.appUrl =
-      (this.stackProps.domain && `https://${this.stackProps.domain.name}`) ||
-      this.cloudFrontUrl;
+    this.appUrl = (this.stackProps.domain && `https://${this.stackProps.domain.name}`) || this.cloudFrontUrl;
   }
 
   private createNextServer(staticAssetsBucket: s3.Bucket) {
-    const nextLayer = new NpmLayerVersion(this, "LayerNext", {
-      layerPath:
-        this.stackProps.nextAppLayerPath ||
-        path.resolve(__dirname, "../layers/next-layer"),
+    const nextLayer = new NpmLayerVersion(this, 'LayerNext', {
+      layerPath: this.stackProps.nextAppLayerPath || path.resolve(__dirname, '../layers/next-layer'),
       layerVersionProps: {
         compatibleArchitectures: [LAMBDA_ARCHITECTURE],
-        compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
-      },
+        compatibleRuntimes: [lambda.Runtime.NODEJS_18_X]
+      }
     });
 
-    const sharpLayer = new NpmLayerVersion(this, "LayerSharp", {
-      layerPath:
-        this.stackProps.sharpLayerPath ||
-        path.resolve(__dirname, "../layers/sharp-layer"),
+    const sharpLayer = new NpmLayerVersion(this, 'LayerSharp', {
+      layerPath: this.stackProps.sharpLayerPath || path.resolve(__dirname, '../layers/sharp-layer'),
       layerVersionProps: {
         compatibleArchitectures: [LAMBDA_ARCHITECTURE],
-        compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
-      },
+        compatibleRuntimes: [lambda.Runtime.NODEJS_18_X]
+      }
     });
 
-    const serverLayerVersion = new lambda.LayerVersion(
-      this,
-      "NextJsDeploymentLayer",
-      {
-        code: lambda.Code.fromAsset(this.stackProps.nextJsPath, {
-          ignoreMode: cdk.IgnoreMode.GIT,
-          exclude: [
-            ".next/cache",
-            ".next/static",
-            "/app",
-            "components",
-            "scripts",
-            ".storybook",
-            ".vscode",
-            "public",
-            "/*.js",
-            "/*.json",
-            "node_modules",
-          ],
-        }),
-      }
-    );
+    const serverLayerVersion = new lambda.LayerVersion(this, 'NextJsDeploymentLayer', {
+      code: lambda.Code.fromAsset(this.stackProps.nextJsPath, {
+        ignoreMode: cdk.IgnoreMode.GIT,
+        exclude: [
+          '.next/cache',
+          '.next/static',
+          '/app',
+          'components',
+          'scripts',
+          '.storybook',
+          '.vscode',
+          'public',
+          '/*.js',
+          '/*.json',
+          'node_modules'
+        ]
+      })
+    });
 
-    const serverLambda = new lambdaNode.NodejsFunction(
-      this,
-      "NextJsServerLambda",
-      {
-        currentVersionOptions: this.stackProps.provisionedConcurrentExecutions
-          ? {
-              provisionedConcurrentExecutions:
-                this.stackProps.provisionedConcurrentExecutions,
-            }
-          : undefined,
-        runtime: LAMBDA_RUNTIME,
-        architecture: LAMBDA_ARCHITECTURE,
-        timeout: cdk.Duration.seconds(29),
-        layers: [serverLayerVersion, nextLayer.layerVersion],
-        memorySize: 512,
-        entry: path.resolve(__dirname, "next-server-handler.js"),
-        environment: this.stackProps.nextServerEnvironment,
-        bundling: {
-          minify: false,
-          target: LAMBDA_ESBUILD_TARGET,
-          externalModules: [
-            LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
-            ...nextLayer.packagedDependencies,
-            "/opt/.next/*",
-          ],
-        },
+    const serverLambda = new lambdaNode.NodejsFunction(this, 'NextJsServerLambda', {
+      currentVersionOptions: this.stackProps.provisionedConcurrentExecutions
+        ? {
+            provisionedConcurrentExecutions: this.stackProps.provisionedConcurrentExecutions
+          }
+        : undefined,
+      runtime: LAMBDA_RUNTIME,
+      architecture: LAMBDA_ARCHITECTURE,
+      timeout: cdk.Duration.seconds(29),
+      layers: [serverLayerVersion, nextLayer.layerVersion],
+      memorySize: 512,
+      entry: path.resolve(__dirname, 'next-server-handler.js'),
+      environment: this.stackProps.nextServerEnvironment,
+      bundling: {
+        minify: false,
+        target: LAMBDA_ESBUILD_TARGET,
+        externalModules: [LAMBDA_ESBUILD_EXTERNAL_AWS_SDK, ...nextLayer.packagedDependencies, '/opt/.next/*']
       }
-    );
+    });
 
-    const imageLambda = new lambdaNode.NodejsFunction(
-      this,
-      "NextJsImageLambda",
-      {
-        runtime: LAMBDA_RUNTIME,
-        architecture: LAMBDA_ARCHITECTURE,
-        timeout: cdk.Duration.seconds(29),
-        layers: [
-          serverLayerVersion,
-          nextLayer.layerVersion,
-          sharpLayer.layerVersion,
-        ],
-        environment: {
-          NEXT_BUILD_BUCKET: staticAssetsBucket.bucketName,
-          NEXT_BUILD_ID: this.buildId,
-        },
-        memorySize: 512,
-        entry: path.resolve(__dirname, "next-image-handler.js"),
-        bundling: {
-          minify: false,
-          target: LAMBDA_ESBUILD_TARGET,
-          externalModules: [
-            ...sharpLayer.packagedDependencies,
-            LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
-            "/opt/.next/required-server-files.json",
-          ],
-        },
+    const imageLambda = new lambdaNode.NodejsFunction(this, 'NextJsImageLambda', {
+      runtime: LAMBDA_RUNTIME,
+      architecture: LAMBDA_ARCHITECTURE,
+      timeout: cdk.Duration.seconds(29),
+      layers: [serverLayerVersion, nextLayer.layerVersion, sharpLayer.layerVersion],
+      environment: {
+        NEXT_BUILD_BUCKET: staticAssetsBucket.bucketName,
+        NEXT_BUILD_ID: this.buildId
+      },
+      memorySize: 512,
+      entry: path.resolve(__dirname, 'next-image-handler.js'),
+      bundling: {
+        minify: false,
+        target: LAMBDA_ESBUILD_TARGET,
+        externalModules: [
+          ...sharpLayer.packagedDependencies,
+          LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
+          '/opt/.next/required-server-files.json'
+        ]
       }
-    );
+    });
 
     staticAssetsBucket.grantRead(imageLambda);
 
-    const api = new apigw.HttpApi(this, "NextJsApiGateway");
+    const api = new apigw.HttpApi(this, 'NextJsApiGateway');
 
-    const serverLambdaIntegration = new apigwInt.HttpLambdaIntegration(
-      "NextJsServerLambdaIntegration",
-      serverLambda
-    );
-    const imageLambdaIntegration = new apigwInt.HttpLambdaIntegration(
-      "NextJsImageLambdaIntegration",
-      imageLambda
-    );
+    const serverLambdaIntegration = new apigwInt.HttpLambdaIntegration('NextJsServerLambdaIntegration', serverLambda);
+    const imageLambdaIntegration = new apigwInt.HttpLambdaIntegration('NextJsImageLambdaIntegration', imageLambda);
 
     api.addRoutes({
       path: `${SERVER_ENDPOINT}/{proxy+}`,
       methods: [apigw.HttpMethod.GET],
-      integration: serverLambdaIntegration,
+      integration: serverLambdaIntegration
     });
 
     api.addRoutes({
       path: `${IMAGE_ENDPOINT}/{proxy+}`,
       methods: [apigw.HttpMethod.GET],
-      integration: imageLambdaIntegration,
+      integration: imageLambdaIntegration
     });
 
     api.addRoutes({
       path: SERVER_ENDPOINT,
       methods: [apigw.HttpMethod.GET],
-      integration: serverLambdaIntegration,
+      integration: serverLambdaIntegration
     });
 
     api.addRoutes({
       path: IMAGE_ENDPOINT,
       methods: [apigw.HttpMethod.GET],
-      integration: imageLambdaIntegration,
+      integration: imageLambdaIntegration
     });
 
     return api;
   }
 
   private createStaticAssetsBucket(bucketName?: string) {
-    const distPath = path.resolve(this.stackProps.nextJsPath, ".next");
-    const staticPath = path.resolve(distPath, "static");
-    const publicPath = path.resolve(this.stackProps.nextJsPath, "public");
+    const distPath = path.resolve(this.stackProps.nextJsPath, '.next');
+    const staticPath = path.resolve(distPath, 'static');
+    const publicPath = path.resolve(this.stackProps.nextJsPath, 'public');
 
     const staticAssetsBucket = new s3.Bucket(this, `NextJsStaticAssets`, {
       bucketName: bucketName,
       autoDeleteObjects: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
     });
 
-    new s3d.BucketDeployment(this, "NextJsStaticAssetsDeployment", {
+    new s3d.BucketDeployment(this, 'NextJsStaticAssetsDeployment', {
       destinationBucket: staticAssetsBucket,
-      destinationKeyPrefix: "_next/static",
+      destinationKeyPrefix: '_next/static',
       sources: [s3d.Source.asset(staticPath)],
       prune: false,
-      cacheControl: [
-        s3d.CacheControl.fromString("public, max-age=315360000, immutable"),
-      ],
+      cacheControl: [s3d.CacheControl.fromString('public, max-age=315360000, immutable')]
     });
 
-    new s3d.BucketDeployment(this, "NextJsPublicAssetsDeployment", {
+    new s3d.BucketDeployment(this, 'NextJsPublicAssetsDeployment', {
       destinationBucket: staticAssetsBucket,
       sources: [s3d.Source.asset(publicPath)],
-      prune: false,
+      prune: false
     });
 
     return staticAssetsBucket;
   }
 
-  private createCloudFrontDistribution(
-    staticAssetsBucket: s3.Bucket,
-    api: apigw.HttpApi
-  ) {
+  private createCloudFrontDistribution(staticAssetsBucket: s3.Bucket, api: apigw.HttpApi) {
     const staticOrigin = new cfo.S3Origin(staticAssetsBucket);
 
-    const apiDomain = `${api.apiId}.execute-api.${
-      Stack.of(this).region
-    }.amazonaws.com`;
+    const apiDomain = `${api.apiId}.execute-api.${Stack.of(this).region}.amazonaws.com`;
 
     const nextServerOrigin = new cfo.HttpOrigin(`${apiDomain}`, {
       protocolPolicy: cf.OriginProtocolPolicy.HTTPS_ONLY,
-      originPath: SERVER_ENDPOINT,
+      originPath: SERVER_ENDPOINT
     });
 
     const nextImageOrigin = new cfo.HttpOrigin(`${apiDomain}`, {
       protocolPolicy: cf.OriginProtocolPolicy.HTTPS_ONLY,
-      originPath: IMAGE_ENDPOINT,
+      originPath: IMAGE_ENDPOINT
     });
 
     const certificate =
       this.stackProps.domain &&
-      cm.Certificate.fromCertificateArn(
-        this,
-        "NextJsCertificate",
-        this.stackProps.domain.domainCertificateArn
-      );
+      cm.Certificate.fromCertificateArn(this, 'NextJsCertificate', this.stackProps.domain.domainCertificateArn);
 
     const domainNames = this.stackProps.domain
       ? [this.stackProps.domain.name, ...(this.stackProps.domain.aliases || [])]
       : undefined;
 
-    const nextServerCachePolicy = new cf.CachePolicy(
-      this,
-      "NextServerCachePolicy",
-      {
-        comment: "NextJS 13 Server optimized",
-        queryStringBehavior: cf.CacheQueryStringBehavior.none(),
-        cookieBehavior: cf.CacheCookieBehavior.none(),
-        headerBehavior: cf.CacheHeaderBehavior.allowList(
-          "RSC",
-          ...(this.stackProps.allowedCacheHeaders || [])
-        ),
-        enableAcceptEncodingGzip: true,
-        enableAcceptEncodingBrotli: true,
-        defaultTtl: cdk.Duration.days(365),
-      }
-    );
+    const nextServerCachePolicy = new cf.CachePolicy(this, 'NextServerCachePolicy', {
+      comment: 'NextJS 13 Server optimized',
+      queryStringBehavior: cf.CacheQueryStringBehavior.none(),
+      cookieBehavior: cf.CacheCookieBehavior.none(),
+      headerBehavior: cf.CacheHeaderBehavior.allowList('RSC', ...(this.stackProps.allowedCacheHeaders || [])),
+      enableAcceptEncodingGzip: true,
+      enableAcceptEncodingBrotli: true,
+      defaultTtl: cdk.Duration.days(365)
+    });
 
-    const nextImageCachePolicy = new cf.CachePolicy(
-      this,
-      "NextImageCachePolicy",
-      {
-        comment: "NextJS 13 image optimized",
-        queryStringBehavior: cf.CacheQueryStringBehavior.all(),
-        enableAcceptEncodingGzip: true,
-        defaultTtl: cdk.Duration.days(30),
-      }
-    );
+    const nextImageCachePolicy = new cf.CachePolicy(this, 'NextImageCachePolicy', {
+      comment: 'NextJS 13 image optimized',
+      queryStringBehavior: cf.CacheQueryStringBehavior.all(),
+      enableAcceptEncodingGzip: true,
+      defaultTtl: cdk.Duration.days(30)
+    });
 
-    const cloudfrontDistribution = new cf.Distribution(
-      this,
-      "NextJsCloudfrontDistribution",
-      {
-        domainNames,
-        certificate,
-        priceClass: cf.PriceClass.PRICE_CLASS_100,
-        httpVersion: cf.HttpVersion.HTTP2,
-        minimumProtocolVersion: cf.SecurityPolicyProtocol.TLS_V1_2_2021,
-        defaultBehavior: {
-          origin: nextServerOrigin,
-          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          cachePolicy: nextServerCachePolicy,
+    const cloudfrontDistribution = new cf.Distribution(this, 'NextJsCloudfrontDistribution', {
+      domainNames,
+      certificate,
+      priceClass: cf.PriceClass.PRICE_CLASS_100,
+      httpVersion: cf.HttpVersion.HTTP2,
+      minimumProtocolVersion: cf.SecurityPolicyProtocol.TLS_V1_2_2021,
+      defaultBehavior: {
+        origin: nextServerOrigin,
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: nextServerCachePolicy
+      },
+      additionalBehaviors: {
+        '/_next/static/*': {
+          origin: staticOrigin,
+          cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
+          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
         },
-        additionalBehaviors: {
-          "/_next/static/*": {
-            origin: staticOrigin,
-            cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
-            viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          },
-          "/_next/image": {
-            origin: nextImageOrigin,
-            cachePolicy: nextImageCachePolicy,
-            compress: true,
-          },
-          "/favicon.ico": {
-            origin: staticOrigin,
-            cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-            viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          },
-          "/logo192.png": {
-            origin: staticOrigin,
-            cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-            viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          },
-          "/manifest.json": {
-            origin: staticOrigin,
-            cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-            viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          },
-          "/robot.txt": {
-            origin: staticOrigin,
-            cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-            viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          },
+        '/_next/image': {
+          origin: nextImageOrigin,
+          cachePolicy: nextImageCachePolicy,
+          compress: true
         },
+        '/favicon.ico': {
+          origin: staticOrigin,
+          cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+        },
+        '/logo192.png': {
+          origin: staticOrigin,
+          cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+        },
+        '/manifest.json': {
+          origin: staticOrigin,
+          cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+        },
+        '/robot.txt': {
+          origin: staticOrigin,
+          cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+          viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+        }
       }
-    );
+    });
 
-    new s3d.BucketDeployment(this, "NextJsInvalidationDeployment", {
+    new s3d.BucketDeployment(this, 'NextJsInvalidationDeployment', {
       destinationBucket: staticAssetsBucket,
-      destinationKeyPrefix: "/",
-      sources: [s3d.Source.data("BUILD_ID", this.buildId)],
+      destinationKeyPrefix: '/',
+      sources: [s3d.Source.data('BUILD_ID', this.buildId)],
       prune: false,
       distribution: cloudfrontDistribution,
-      distributionPaths: ["/*"],
+      distributionPaths: ['/*']
     });
 
     this.stackProps.domain &&
       new r53.ARecord(this, `${this.stackProps.domain.name}_Alias}`, {
         recordName: this.stackProps.domain.name,
-        target: r53.RecordTarget.fromAlias(
-          new r53t.CloudFrontTarget(cloudfrontDistribution)
-        ),
-        zone: this.stackProps.domain.hostedZone,
+        target: r53.RecordTarget.fromAlias(new r53t.CloudFrontTarget(cloudfrontDistribution)),
+        zone: this.stackProps.domain.hostedZone
       });
 
     return cloudfrontDistribution;

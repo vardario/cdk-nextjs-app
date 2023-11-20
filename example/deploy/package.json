@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "deploy",
   "version": "0.1.9",
   "bin": {
@@ -6,21 +7,10 @@
   },
   "scripts": {
     "build": "tsc",
-    "watch": "tsc -w",    
     "cdk-deploy": "cdk deploy --outputs-file ./cdk.outputs.json",
     "cdk-destroy": "cdk destroy",
-    "cdk-synth": "cdk synth"
-  },
-  "devDependencies": {
-    "@types/jest": "^27.5.2",
-    "@types/node": "10.17.27",
-    "@types/prettier": "2.6.0",
-    "aws-cdk": "^2.74.0",
-    "jest": "^27.5.1",
-    "ts-jest": "^27.1.4",
-    "ts-node": "^10.9.1",
-    "typescript": "~3.9.7",
-    "@vardario/cdk-nextjs-app": "workspace:*"
+    "cdk-synth": "cdk synth",
+    "watch": "tsc -w"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.78.0",
@@ -28,5 +18,15 @@
     "esbuild": "^0.17.17",
     "source-map-support": "^0.5.21"
   },
-  "private": true
+  "devDependencies": {
+    "@types/jest": "^27.5.2",
+    "@types/node": "10.17.27",
+    "@types/prettier": "2.6.0",
+    "@vardario/cdk-nextjs-app": "workspace:*",
+    "aws-cdk": "^2.74.0",
+    "jest": "^27.5.1",
+    "ts-jest": "^27.1.4",
+    "ts-node": "^10.9.1",
+    "typescript": "~3.9.7"
+  }
 }
