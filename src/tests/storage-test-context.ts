@@ -1,6 +1,6 @@
-import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
-import { randomUUID } from "node:crypto";
-import { GenericContainer, StartedTestContainer } from "testcontainers";
+import { CreateBucketCommand, S3Client } from '@aws-sdk/client-s3';
+import { randomUUID } from 'node:crypto';
+import { GenericContainer, StartedTestContainer } from 'testcontainers';
 
 const startContainerIfNecessary = async () => {
   const portEnv = process.env[StorageTestContext.S3_PORT_ENV_KEY];
@@ -9,11 +9,11 @@ const startContainerIfNecessary = async () => {
     return { port, container: undefined };
   } else {
     const dockerPort = 4566;
-    const container = await new GenericContainer("localstack/localstack")
+    const container = await new GenericContainer('localstack/localstack')
       .withExposedPorts(dockerPort)
       .withEnvironment({
-        SERVICES: "s3",
-        AWS_DEFAULT_REGION: StorageTestContext.S3_REGION,
+        SERVICES: 's3',
+        AWS_DEFAULT_REGION: StorageTestContext.S3_REGION
       })
       .start();
     const port = container.getMappedPort(dockerPort);
@@ -22,9 +22,9 @@ const startContainerIfNecessary = async () => {
 };
 
 export class StorageTestContext {
-  public static readonly S3_PORT_ENV_KEY = "__TEST_S3_PORT__";
-  public static readonly S3_REGION = "eu-central-1";
-  public static readonly GLOBAL_KEY = "__S3_TEST_CONTEXT__";
+  public static readonly S3_PORT_ENV_KEY = '__TEST_S3_PORT__';
+  public static readonly S3_REGION = 'eu-central-1';
+  public static readonly GLOBAL_KEY = '__S3_TEST_CONTEXT__';
 
   public s3Client: S3Client;
 
@@ -36,10 +36,10 @@ export class StorageTestContext {
       endpoint: `http://localhost:${this.port}`,
       region: StorageTestContext.S3_REGION,
       credentials: {
-        accessKeyId: "test",
-        secretAccessKey: "test",
+        accessKeyId: 'test',
+        secretAccessKey: 'test'
       },
-      forcePathStyle: true,
+      forcePathStyle: true
     });
   }
 
@@ -56,9 +56,7 @@ export class StorageTestContext {
   }
 
   public static async destroyGlobal() {
-    const storageTestContext = (globalThis as any)[
-      StorageTestContext.GLOBAL_KEY
-    ] as StorageTestContext;
+    const storageTestContext = (globalThis as any)[StorageTestContext.GLOBAL_KEY] as StorageTestContext;
     await storageTestContext.destroy();
   }
 

@@ -1,18 +1,64 @@
 {
-  "name": "root",
-  "version": "0.1.9",
-  "description": "",
-  "private": true,
-  "scripts": {
-    "build": "pnpm --filter @vardario/cdk-nextjs-app run build && pnpm -r build",
-    "repo-clean": "git clean -xdf -e .env",
-    "test": "pnpm -r test"
-  },
-  "author": "Sahin Vardar",
+  "name": "@vardario/cdk-nextjs-app",
+  "version": "0.0.0-development",
+  "description": "CDK Construct to deploy a Next.js app to AWS",
   "license": "MIT",
-  "packageManager": "pnpm@8.6.0",
+  "author": "Sahin Vardar",
   "repository": {
     "type": "git",
-    "url": "git@github.com:vardario/cdk-svelte-app.git"
-  }
+    "url": "git@github.com:vardario/cdk-react-app.git"
+  },
+  "main": "lib/index.js",
+  "files": [
+    "/layers",
+    "/lib"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "format": "prettier --plugin-search-dir . --write . && prettier-package-json --write && eslint --fix .",
+    "prepare": "husky install",
+    "repo-clean": "git clean -xdf -e .env",
+    "test": "vitest run",
+    "watch": "tsc --build --watch"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.188.0",
+    "next": "^13.3.0",
+    "serverless-http": "^3.2.0"
+  },
+  "peerDependencies": {
+    "@apimda/npm-layer-version": "^1.0.0",
+    "@aws-cdk/aws-apigatewayv2-alpha": "^2.67.0-alpha.0",
+    "@aws-cdk/aws-apigatewayv2-integrations-alpha": "^2.67.0-alpha.0",
+    "aws-cdk-lib": "^2.78.0",
+    "constructs": "^10.2.17"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.119",
+    "@types/node": "^20.1.2",
+    "@typescript-eslint/eslint-plugin": "^6.11.0",
+    "@typescript-eslint/parser": "^6.11.0",
+    "aws-lambda": "^1.0.7",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-unused-imports": "^3.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.1.0",
+    "node-mocks-http": "^1.12.2",
+    "prettier": "^3.1.0",
+    "prettier-package-json": "^2.8.0",
+    "semantic-release": "^22.0.8",
+    "sharp": "^0.32.4",
+    "testcontainers": "^10.0.1",
+    "typescript": "^5.0.4",
+    "vitest": "^0.34.1"
+  },
+  "lint-staged": {
+    "*": [
+      "prettier --write --ignore-unknown",
+      "eslint --fix"
+    ],
+    "package.json": "prettier-package-json --write"
+  },
+  "packageManager": "pnpm@8.10.5"
 }
