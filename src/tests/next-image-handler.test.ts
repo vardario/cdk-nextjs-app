@@ -62,7 +62,6 @@ afterAll(async () => {
 describe('NextJs Image Lambda', async () => {
   test('image optimizer', async () => {
     const imageBuffer0 = await requestImage('/_next/static/media/test.jpg', 640, 75);
-
     const imageBuffer1 = await requestImage('/_next/static/media/test.jpg', 1080, 75);
 
     const image0 = sharp(imageBuffer0);
