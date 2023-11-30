@@ -106,6 +106,7 @@ export class NextJsApp extends Construct {
   private readonly buildId: string;
   public readonly appUrl: string;
   public readonly cloudFrontUrl: string;
+  public readonly cloudfrontDistribution: cf.Distribution;
 
   constructor(scope: Construct, id: string, stackProps: NextJsAppProps) {
     super(scope, id);
@@ -122,9 +123,8 @@ export class NextJsApp extends Construct {
       (stackProps.domain && stackProps.domain.name) || undefined
     );
     const api = this.createNextServer(staticAssetsBucket);
-    const cloudfrontDistribution = this.createCloudFrontDistribution(staticAssetsBucket, api);
-
-    this.cloudFrontUrl = `https://${cloudfrontDistribution.domainName}`;
+    this.cloudfrontDistribution = this.createCloudFrontDistribution(staticAssetsBucket, api);
+    this.cloudFrontUrl = `https://${this.cloudfrontDistribution.domainName}`;
     this.appUrl = (this.stackProps.domain && `https://${this.stackProps.domain.name}`) || this.cloudFrontUrl;
   }
 
