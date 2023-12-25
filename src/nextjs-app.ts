@@ -101,6 +101,9 @@ export interface NextJsAppProps {
   additionalCachingPaths?: string[];
 }
 
+const NEXT_REQUIRED_SERVER_FILES = '/opt/.next/required-server-files.json';
+const NEXT_APP_PATH = '/opt';
+
 export class NextJsApp extends Construct {
   private readonly stackProps: NextJsAppProps;
   private readonly buildId: string;
@@ -178,8 +181,8 @@ export class NextJsApp extends Construct {
       entry: path.resolve(__dirname, 'next-server-handler.js'),
       environment: {
         ...this.stackProps.nextServerEnvironment,
-        NEXT_REQUIRED_SERVER_FILES: '/opt/.next/required-server-files.json',
-        NEXT_APP_PATH: '/opt'
+        NEXT_REQUIRED_SERVER_FILES,
+        NEXT_APP_PATH
       },
       bundling: {
         minify: false,
@@ -195,7 +198,8 @@ export class NextJsApp extends Construct {
       layers: [serverLayerVersion, nextLayer.layerVersion, sharpLayer.layerVersion],
       environment: {
         NEXT_BUILD_BUCKET: staticAssetsBucket.bucketName,
-        NEXT_BUILD_ID: this.buildId
+        NEXT_BUILD_ID: this.buildId,
+        NEXT_REQUIRED_SERVER_FILES
       },
       memorySize: 512,
       entry: path.resolve(__dirname, 'next-image-handler.js'),
@@ -205,7 +209,7 @@ export class NextJsApp extends Construct {
         externalModules: [
           ...sharpLayer.packagedDependencies,
           LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
-          '/opt/.next/required-server-files.json'
+          NEXT_REQUIRED_SERVER_FILES
         ]
       }
     });

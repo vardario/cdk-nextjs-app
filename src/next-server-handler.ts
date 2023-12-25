@@ -25,30 +25,32 @@ const getNextRequestHandler = () => {
 
 let nextRequestHandler: NodeRequestHandler | undefined;
 
+const _handler = slsHttp(
+  async (req: IncomingMessage, res: ServerResponse) => {
+    if (!nextRequestHandler) {
+      nextRequestHandler = getNextRequestHandler();
+    }
+
+    try {
+      await nextRequestHandler(req, res);
+    } catch (error) {
+      console.error('NextJS request failed due to:');
+      console.error(error);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(getErrMessage(error), null, 3));
+    }
+  },
+  {
+    binary: true,
+    provider: 'aws',
+    basePath: '/server'
+  }
+);
+
 export const handler = async (
   event: APIGatewayProxyEventV2,
   context: any,
   _: any
 ): Promise<APIGatewayProxyStructuredResultV2> => {
-  const _handler = slsHttp(
-    async (req: IncomingMessage, res: ServerResponse) => {
-      if (!nextRequestHandler) {
-        nextRequestHandler = getNextRequestHandler();
-      }
-
-      await nextRequestHandler(req, res).catch(e => {
-        console.error('NextJS request failed due to:');
-        console.error(e);
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify(getErrMessage(e), null, 3));
-      });
-    },
-    {
-      binary: true,
-      provider: 'aws',
-      basePath: '/server'
-    }
-  );
-
   return _handler(event, context);
 };

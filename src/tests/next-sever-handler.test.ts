@@ -2,6 +2,7 @@ import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 import { test, describe } from 'vitest';
 import { handler } from '../next-server-handler';
 import path from 'node:path';
+import { expect } from 'vitest';
 
 describe('NextJs Server Lambda', async () => {
   test('server handler', async () => {
@@ -40,6 +41,6 @@ describe('NextJs Server Lambda', async () => {
     process.env.NEXT_APP_PATH = path.resolve(__dirname, '../../example/nextjs-app');
 
     const response = await handler(event, {} as Context, () => {});
-    console.log(response);
+    expect(response.statusCode).toBe(200);
   });
 });
