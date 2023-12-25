@@ -176,7 +176,11 @@ export class NextJsApp extends Construct {
       layers: [serverLayerVersion, nextLayer.layerVersion],
       memorySize: 512,
       entry: path.resolve(__dirname, 'next-server-handler.js'),
-      environment: this.stackProps.nextServerEnvironment,
+      environment: {
+        ...this.stackProps.nextServerEnvironment,
+        NEXT_REQUIRED_SERVER_FILES: '/opt/.next/required-server-files.json',
+        NEXT_APP_PATH: '/opt'
+      },
       bundling: {
         minify: false,
         target: LAMBDA_ESBUILD_TARGET,
