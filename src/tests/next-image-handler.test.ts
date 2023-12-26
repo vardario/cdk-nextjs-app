@@ -4,7 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parse, stringify } from 'node:querystring';
 import { IncomingMessage, ServerResponse } from 'node:http';
-import { NextJsImageDownloadHandler, createS3DownloadHandler, optimizeImage, handler } from '../next-image-handler';
+import {
+  NextJsImageDownloadHandler,
+  createS3DownloadHandler,
+  optimizeImage,
+  createNextImageHandler
+} from '../next-image-handler';
 import sharp from 'sharp';
 import { StorageTestContext } from './storage-test-context';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
@@ -134,14 +139,8 @@ describe('NextJs Image Lambda', async () => {
     process.env.NEXT_REQUIRED_SERVER_FILES = requiredServerFilesPath;
     process.env.NEXT_BUILD_BUCKET = bucket;
 
-    const response = await handler(
-      event,
-      null as any,
-      null as any,
-
-      context.s3Client
-    );
-
+    const handler = createNextImageHandler(context.s3Client);
+    const response = await handler(event, null as any, null as any);
     const imageBuffer = Buffer.from(response.body!, 'base64');
     const imageMeta = await sharp(imageBuffer).metadata();
     expect(imageMeta.width).toBe(1080);

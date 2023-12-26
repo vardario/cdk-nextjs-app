@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 import { test, describe } from 'vitest';
-import { handler } from '../next-server-handler';
+import { createNextServerHandler } from '../next-server-handler';
 import path from 'node:path';
 import { expect } from 'vitest';
 
@@ -8,34 +8,54 @@ describe('NextJs Server Lambda', async () => {
   test('server handler', async () => {
     const event: APIGatewayProxyEventV2 = {
       version: '2.0',
-      routeKey: 'GET /',
+      routeKey: '$default',
       rawPath: '/',
       rawQueryString: '',
-      headers: {},
+      cookies: ['cookie1', 'cookie2'],
+      headers: {
+        Header1: 'value1',
+        Header2: 'value1,value2'
+      },
       queryStringParameters: {},
       requestContext: {
-        accountId: '291069951709',
-        apiId: 'ojsh2ljdn5',
-        domainName: 'ojsh2ljdn5.execute-api.eu-central-1.amazonaws.com',
-        domainPrefix: 'ojsh2ljdn5',
+        accountId: '123456789012',
+        apiId: 'api-id',
+        authentication: {
+          clientCert: {
+            clientCertPem: 'CERT_CONTENT',
+            subjectDN: 'www.example.com',
+            issuerDN: 'Example issuer',
+            serialNumber: 'a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1',
+            validity: {
+              notBefore: 'May 28 12:30:02 2019 GMT',
+              notAfter: 'Aug  5 09:36:04 2021 GMT'
+            }
+          }
+        },
+        domainName: 'localhost',
+        domainPrefix: 'id',
         http: {
           method: 'GET',
-          path: '/server',
+          path: '/',
           protocol: 'HTTP/1.1',
-          sourceIp: '80.187.86.175',
-          userAgent: 'PostmanRuntime/7.32.3'
+          sourceIp: '192.168.0.1/32',
+          userAgent: 'agent'
         },
-        requestId: 'JFzWRj2yliAEMOw=',
-        routeKey: 'GET /server',
+        requestId: 'id',
+        routeKey: '$default',
         stage: '$default',
-        time: '03/Aug/2023:15:47:51 +0000',
-        timeEpoch: 1691077671852
+        time: '12/Mar/2020:19:03:58 +0000',
+        timeEpoch: 1583348638390
       },
-      isBase64Encoded: false
+      pathParameters: {},
+      isBase64Encoded: false,
+      stageVariables: {
+        stageVariable1: 'value1',
+        stageVariable2: 'value2'
+      }
     };
 
-    process.env.NEXT_APP_PATH = path.resolve(__dirname, '../../example/nextjs-app');
-
+    const handler = createNextServerHandler(path.resolve(__dirname, '../../example/nextjs-app'));
     const response = await handler(event, {} as Context, () => {});
     expect(response.statusCode).toBe(200);
     expect(response.headers!['x-powered-by']).toBe('Next.js');

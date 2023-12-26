@@ -5,8 +5,8 @@ import { NextUrlWithParsedQuery } from 'next/dist/server/request-meta';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import https from 'node:https';
 import { parse } from 'node:querystring';
-import slsHttp from 'serverless-http';
-import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import serverlessExpress from '@codegenie/serverless-express';
+
 import fs from 'node:fs';
 
 export type NextJsImageDownloadHandler = (
@@ -95,29 +95,18 @@ export async function optimizeImage(
   res.end();
 }
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-  context: any,
-  callback: any,
-  s3Client?: S3Client
-): Promise<APIGatewayProxyStructuredResultV2> => {
-  const _handler = slsHttp(
-    async (req: IncomingMessage, res: ServerResponse) => {
+export function createNextImageHandler(s3Client?: S3Client) {
+  return serverlessExpress({
+    app: async (req: IncomingMessage, res: ServerResponse) => {
       const { config } = JSON.parse(fs.readFileSync(process.env.NEXT_REQUIRED_SERVER_FILES!).toString('utf-8'));
-
       await optimizeImage(
         req,
         res,
         config,
         createS3DownloadHandler(s3Client || new S3Client({}), process.env.NEXT_BUILD_BUCKET!)
       );
-    },
-    {
-      binary: true,
-      provider: 'aws',
-      basePath: '/image'
     }
-  );
+  });
+}
 
-  return _handler(event, context);
-};
+export const handler = createNextImageHandler();
