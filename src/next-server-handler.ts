@@ -3,13 +3,16 @@ import NextServer, { NodeRequestHandler, Options } from 'next/dist/server/next-s
 
 import slsHttp from 'serverless-http';
 import fs from 'node:fs';
+import path from 'node:path';
 import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 process.env.NODE_ENV = 'production';
 
 const getErrMessage = (e: any) => ({ message: 'Server failed to respond.', details: e });
 
 const getNextRequestHandler = () => {
-  const requiredServerFiles = JSON.parse(fs.readFileSync(process.env.NEXT_REQUIRED_SERVER_FILES!).toString());
+  const requiredServerFiles = JSON.parse(
+    fs.readFileSync(path.resolve(process.env.NEXT_APP_PATH!, '.next/server/required-server-files.json')).toString()
+  );
 
   const config: Options = {
     hostname: 'localhost',

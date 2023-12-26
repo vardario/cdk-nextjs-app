@@ -34,10 +34,6 @@ describe('NextJs Server Lambda', async () => {
       isBase64Encoded: false
     };
 
-    process.env.NEXT_REQUIRED_SERVER_FILES = path.resolve(
-      __dirname,
-      '../../example/nextjs-app/.next/required-server-files.json'
-    );
     process.env.NEXT_APP_PATH = path.resolve(__dirname, '../../example/nextjs-app');
 
     const response = await handler(event, {} as Context, () => {});
