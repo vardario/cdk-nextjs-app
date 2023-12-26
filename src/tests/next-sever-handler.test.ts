@@ -42,5 +42,7 @@ describe('NextJs Server Lambda', async () => {
 
     const response = await handler(event, {} as Context, () => {});
     expect(response.statusCode).toBe(200);
+    expect(response.headers!['x-powered-by']).toBe('Next.js');
+    expect(response.headers!['content-type']).toBe('text/html; charset=utf-8');
   });
 });
