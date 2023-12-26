@@ -103,11 +103,7 @@ export const handler = async (
 ): Promise<APIGatewayProxyStructuredResultV2> => {
   const _handler = slsHttp(
     async (req: IncomingMessage, res: ServerResponse) => {
-      const { config } = JSON.parse(
-        fs
-          .readFileSync(process.env.NEXT_REQUIRED_SERVER_FILES || '/opt/.next/required-server-files.json')
-          .toString('utf-8')
-      );
+      const { config } = JSON.parse(fs.readFileSync(process.env.NEXT_REQUIRED_SERVER_FILES!).toString('utf-8'));
 
       await optimizeImage(
         req,

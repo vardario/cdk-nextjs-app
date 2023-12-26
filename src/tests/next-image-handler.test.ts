@@ -1,4 +1,4 @@
-import { expect, test, beforeAll, afterAll } from 'vitest';
+import { expect, test, beforeAll, afterAll, describe } from 'vitest';
 import httpMocks from 'node-mocks-http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,7 +6,6 @@ import { parse, stringify } from 'node:querystring';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { NextJsImageDownloadHandler, createS3DownloadHandler, optimizeImage, handler } from '../next-image-handler';
 import sharp from 'sharp';
-import { describe } from 'node:test';
 import { StorageTestContext } from './storage-test-context';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
