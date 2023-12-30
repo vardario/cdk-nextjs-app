@@ -10,9 +10,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.188.0
         version: 3.188.0
-      serverless-http:
-        specifier: ^3.2.0
-        version: 3.2.0
+      '@codegenie/serverless-express':
+        specifier: ^4.13.0
+        version: 4.13.0
     devDependencies:
       '@apimda/npm-layer-version':
         specifier: ^1.0.0
@@ -1587,6 +1587,12 @@ packages:
     resolution:
       { integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw== }
     dev: true
+
+  /@codegenie/serverless-express@4.13.0:
+    resolution:
+      { integrity: sha512-xjTotGExm+2j45T6XTvDuTJO1105jKLf152j9nXXeJboYH3dwd8Ted6guv+jDFNouf0uKOO7AhGRQdCTpLVIiw== }
+    engines: { node: '>=12' }
+    dev: false
 
   /@colors/colors@1.5.0:
     resolution:
@@ -9026,12 +9032,6 @@ packages:
     hasBin: true
     dependencies:
       lru-cache: 6.0.0
-
-  /serverless-http@3.2.0:
-    resolution:
-      { integrity: sha512-QvSyZXljRLIGqwcJ4xsKJXwkZnAVkse1OajepxfjkBXV0BMvRS5R546Z4kCBI8IygDzkQY0foNPC/rnipaE9pQ== }
-    engines: { node: '>=12.0' }
-    dev: false
 
   /sharp@0.32.4:
     resolution:

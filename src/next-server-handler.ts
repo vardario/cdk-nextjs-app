@@ -1,56 +1,60 @@
-import { IncomingMessage, ServerResponse } from 'http';
-import NextServer, { NodeRequestHandler, Options } from 'next/dist/server/next-server';
-
-import slsHttp from 'serverless-http';
-import fs from 'node:fs';
+import next from 'next';
+import http from 'node:http';
 import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
-process.env.NODE_ENV = 'production';
 
-const getErrMessage = (e: any) => ({ message: 'Server failed to respond.', details: e });
+const EXCLUDED_RESPONSE_HEADERS = ['content-encoding', 'connection', 'keep-alive', 'transfer-encoding'];
 
-const getNextRequestHandler = () => {
-  const requiredServerFiles = JSON.parse(fs.readFileSync(process.env.NEXT_REQUIRED_SERVER_FILES!).toString());
+export type Handler = (event: APIGatewayProxyEventV2) => Promise<APIGatewayProxyStructuredResultV2>;
 
-  const config: Options = {
-    hostname: 'localhost',
-    port: Number(process.env.PORT) || 3000,
-    dir: process.env.NEXT_APP_PATH,
-    dev: false,
-    customServer: false,
-    conf: requiredServerFiles.config
+export interface CreateNextServerHandlerProps {
+  dir: string;
+  basePath?: string;
+}
+
+export function createNextServerHandler({ dir, basePath }: CreateNextServerHandlerProps): Handler {
+  const createNextServer = async () => {
+    return new Promise<http.Server>((resolve, reject) => {
+      const app = next({ dev: false, dir });
+      app
+        .prepare()
+        .then(() => {
+          const server = http.createServer(app.getRequestHandler());
+          server.listen(3000, () => {
+            resolve(server);
+          });
+        })
+        .catch(reject);
+    });
   };
 
-  return new NextServer(config).getRequestHandler();
-};
+  let server: http.Server | undefined;
 
-let nextRequestHandler: NodeRequestHandler | undefined;
-
-const _handler = slsHttp(
-  async (req: IncomingMessage, res: ServerResponse) => {
-    if (!nextRequestHandler) {
-      nextRequestHandler = getNextRequestHandler();
+  const handler: Handler = async event => {
+    event.rawPath = event.rawPath.replace(basePath || '', '');
+    if (!server) {
+      server = await createNextServer();
     }
 
-    try {
-      await nextRequestHandler(req, res);
-    } catch (error) {
-      console.error('NextJS request failed due to:');
-      console.error(error);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(getErrMessage(error), null, 3));
-    }
-  },
-  {
-    binary: true,
-    provider: 'aws',
-    basePath: '/server'
-  }
-);
+    const response = await fetch(`http://localhost:3000/${event.rawPath}`);
+    const headers: Record<string, string> = {};
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-  context: any,
-  _: any
-): Promise<APIGatewayProxyStructuredResultV2> => {
-  return _handler(event, context);
-};
+    response.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+
+    EXCLUDED_RESPONSE_HEADERS.forEach(header => delete headers[header]);
+
+    return {
+      statusCode: response.status,
+      body: await response.text(),
+      headers
+    };
+  };
+
+  return handler;
+}
+
+export const handler = createNextServerHandler({
+  dir: process.env.NEXT_APP_PATH!,
+  basePath: process.env.SERVER_ENDPOINT!
+});

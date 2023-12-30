@@ -5,8 +5,8 @@ import { NextUrlWithParsedQuery } from 'next/dist/server/request-meta';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import https from 'node:https';
 import { parse } from 'node:querystring';
-import slsHttp from 'serverless-http';
-import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import serverlessExpress from '@codegenie/serverless-express';
+import path from 'node:path';
 import fs from 'node:fs';
 
 export type NextJsImageDownloadHandler = (
@@ -95,29 +95,27 @@ export async function optimizeImage(
   res.end();
 }
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-  context: any,
-  callback: any,
-  s3Client?: S3Client
-): Promise<APIGatewayProxyStructuredResultV2> => {
-  const _handler = slsHttp(
-    async (req: IncomingMessage, res: ServerResponse) => {
-      const { config } = JSON.parse(fs.readFileSync(process.env.NEXT_REQUIRED_SERVER_FILES!).toString('utf-8'));
+export interface CreateNextImageHandlerProps {
+  dir: string;
+  bucket: string;
+  s3Client?: S3Client;
+  basePath?: string;
+}
 
-      await optimizeImage(
-        req,
-        res,
-        config,
-        createS3DownloadHandler(s3Client || new S3Client({}), process.env.NEXT_BUILD_BUCKET!)
+export function createNextImageHandler({ dir, bucket, s3Client, basePath }: CreateNextImageHandlerProps) {
+  return serverlessExpress({
+    app: async (req: IncomingMessage, res: ServerResponse) => {
+      req.url = basePath ? req.url?.replace(basePath, '') : req.url;
+      const { config } = JSON.parse(
+        fs.readFileSync(path.resolve(dir, '.next/required-server-files.json')).toString('utf-8')
       );
-    },
-    {
-      binary: true,
-      provider: 'aws',
-      basePath: '/image'
+      await optimizeImage(req, res, config, createS3DownloadHandler(s3Client || new S3Client({}), bucket));
     }
-  );
+  });
+}
 
-  return _handler(event, context);
-};
+export const handler = createNextImageHandler({
+  dir: process.env.NEXT_APP_PATH!,
+  bucket: process.env.NEXT_BUILD_BUCKET!,
+  basePath: process.env.IMAGE_ENDPOINT!
+});
