@@ -13,9 +13,6 @@ importers:
       '@codegenie/serverless-express':
         specifier: ^4.13.0
         version: 4.13.0
-      serverless-http:
-        specifier: ^3.2.0
-        version: 3.2.0
     devDependencies:
       '@apimda/npm-layer-version':
         specifier: ^1.0.0
@@ -9035,12 +9032,6 @@ packages:
     hasBin: true
     dependencies:
       lru-cache: 6.0.0
-
-  /serverless-http@3.2.0:
-    resolution:
-      { integrity: sha512-QvSyZXljRLIGqwcJ4xsKJXwkZnAVkse1OajepxfjkBXV0BMvRS5R546Z4kCBI8IygDzkQY0foNPC/rnipaE9pQ== }
-    engines: { node: '>=12.0' }
-    dev: false
 
   /sharp@0.32.4:
     resolution:
