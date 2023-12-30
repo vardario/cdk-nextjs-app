@@ -45,7 +45,7 @@ export function createNextServerHandler({ dir, basePath }: CreateNextServerHandl
     EXCLUDED_RESPONSE_HEADERS.forEach(header => delete headers[header]);
 
     return {
-      statusCode: 200,
+      statusCode: response.status,
       body: await response.text(),
       headers
     };
