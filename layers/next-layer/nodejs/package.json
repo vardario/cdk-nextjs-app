@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "next": "^14.0.4"
+  },
+  "scripts": {
+    "postinstall": "node post-install.js"
   }
 }
