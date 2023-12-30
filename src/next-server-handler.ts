@@ -2,6 +2,8 @@ import next from 'next';
 import http from 'node:http';
 import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 
+const EXCLUDED_RESPONSE_HEADERS = ['content-encoding', 'connection', 'keep-alive', 'transfer-encoding'];
+
 export type Handler = (event: APIGatewayProxyEventV2) => Promise<APIGatewayProxyStructuredResultV2>;
 
 export interface CreateNextServerHandlerProps {
@@ -39,6 +41,8 @@ export function createNextServerHandler({ dir, basePath }: CreateNextServerHandl
     response.headers.forEach((value, key) => {
       headers[key] = value;
     });
+
+    EXCLUDED_RESPONSE_HEADERS.forEach(header => delete headers[header]);
 
     return {
       statusCode: 200,
