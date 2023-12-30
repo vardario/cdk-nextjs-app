@@ -6,7 +6,7 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import https from 'node:https';
 import { parse } from 'node:querystring';
 import serverlessExpress from '@codegenie/serverless-express';
-
+import path from 'node:path';
 import fs from 'node:fs';
 
 export type NextJsImageDownloadHandler = (
@@ -95,18 +95,27 @@ export async function optimizeImage(
   res.end();
 }
 
-export function createNextImageHandler(s3Client?: S3Client) {
+export interface CreateNextImageHandlerProps {
+  dir: string;
+  bucket: string;
+  s3Client?: S3Client;
+  basePath?: string;
+}
+
+export function createNextImageHandler({ dir, bucket, s3Client, basePath }: CreateNextImageHandlerProps) {
   return serverlessExpress({
     app: async (req: IncomingMessage, res: ServerResponse) => {
-      const { config } = JSON.parse(fs.readFileSync(process.env.NEXT_REQUIRED_SERVER_FILES!).toString('utf-8'));
-      await optimizeImage(
-        req,
-        res,
-        config,
-        createS3DownloadHandler(s3Client || new S3Client({}), process.env.NEXT_BUILD_BUCKET!)
+      req.url = basePath ? req.url?.replace(basePath, '') : req.url;
+      const { config } = JSON.parse(
+        fs.readFileSync(path.resolve(dir, '.next/required-server-files.json')).toString('utf-8')
       );
+      await optimizeImage(req, res, config, createS3DownloadHandler(s3Client || new S3Client({}), bucket));
     }
   });
 }
 
-export const handler = createNextImageHandler();
+export const handler = createNextImageHandler({
+  dir: process.env.NEXT_APP_PATH!,
+  bucket: process.env.NEXT_BUILD_BUCKET!,
+  basePath: process.env.IMAGE_ENDPOINT!
+});

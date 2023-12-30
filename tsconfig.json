@@ -3,7 +3,7 @@
     "rootDir": "src",
     "outDir": "lib",
     "incremental": true,
-    "lib": ["ES2021"],
+    "lib": ["ES2021", "DOM"],
     "module": "commonjs",
     "target": "ES2021",
     "strict": true,
@@ -14,6 +14,6 @@
     "experimentalDecorators": true,
     "declaration": true
   },
-  "include": ["src/*"],
+  "include": ["src/*", "src/tests/server.ts"],
   "exclude": ["src/test/**/*"]
 }

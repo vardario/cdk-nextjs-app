@@ -24,9 +24,7 @@ import {
   LAMBDA_ESBUILD_TARGET,
   LAMBDA_RUNTIME
 } from './stack-utils';
-
-const SERVER_ENDPOINT = '/server';
-const IMAGE_ENDPOINT = '/image';
+import { IMAGE_ENDPOINT, SERVER_ENDPOINT } from './utils';
 
 export interface NextJsAppDomain {
   /**
@@ -101,7 +99,6 @@ export interface NextJsAppProps {
   additionalCachingPaths?: string[];
 }
 
-const NEXT_REQUIRED_SERVER_FILES = '/opt/.next/required-server-files.json';
 const NEXT_APP_PATH = '/opt';
 
 export class NextJsApp extends Construct {
@@ -181,13 +178,13 @@ export class NextJsApp extends Construct {
       entry: path.resolve(__dirname, 'next-server-handler.js'),
       environment: {
         ...this.stackProps.nextServerEnvironment,
-        NEXT_REQUIRED_SERVER_FILES,
-        NEXT_APP_PATH
+        NEXT_APP_PATH,
+        SERVER_ENDPOINT
       },
       bundling: {
         minify: false,
         target: LAMBDA_ESBUILD_TARGET,
-        externalModules: [LAMBDA_ESBUILD_EXTERNAL_AWS_SDK, ...nextLayer.packagedDependencies, '/opt/.next/*']
+        externalModules: [LAMBDA_ESBUILD_EXTERNAL_AWS_SDK, ...nextLayer.packagedDependencies]
       }
     });
 
@@ -198,19 +195,15 @@ export class NextJsApp extends Construct {
       layers: [serverLayerVersion, nextLayer.layerVersion, sharpLayer.layerVersion],
       environment: {
         NEXT_BUILD_BUCKET: staticAssetsBucket.bucketName,
-        NEXT_BUILD_ID: this.buildId,
-        NEXT_REQUIRED_SERVER_FILES
+        NEXT_APP_PATH,
+        IMAGE_ENDPOINT
       },
       memorySize: 512,
       entry: path.resolve(__dirname, 'next-image-handler.js'),
       bundling: {
         minify: false,
         target: LAMBDA_ESBUILD_TARGET,
-        externalModules: [
-          ...sharpLayer.packagedDependencies,
-          LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
-          NEXT_REQUIRED_SERVER_FILES
-        ]
+        externalModules: [...sharpLayer.packagedDependencies, LAMBDA_ESBUILD_EXTERNAL_AWS_SDK]
       }
     });
 
@@ -228,15 +221,15 @@ export class NextJsApp extends Construct {
     });
 
     api.addRoutes({
-      path: `${IMAGE_ENDPOINT}/{proxy+}`,
-      methods: [apigw.HttpMethod.GET],
-      integration: imageLambdaIntegration
-    });
-
-    api.addRoutes({
       path: SERVER_ENDPOINT,
       methods: [apigw.HttpMethod.GET],
       integration: serverLambdaIntegration
+    });
+
+    api.addRoutes({
+      path: `${IMAGE_ENDPOINT}/{proxy+}`,
+      methods: [apigw.HttpMethod.GET],
+      integration: imageLambdaIntegration
     });
 
     api.addRoutes({
@@ -278,7 +271,6 @@ export class NextJsApp extends Construct {
 
   private createCloudFrontDistribution(staticAssetsBucket: s3.Bucket, api: apigw.HttpApi) {
     const staticOrigin = new cfo.S3Origin(staticAssetsBucket);
-
     const apiDomain = `${api.apiId}.execute-api.${Stack.of(this).region}.amazonaws.com`;
 
     const nextServerOrigin = new cfo.HttpOrigin(`${apiDomain}`, {

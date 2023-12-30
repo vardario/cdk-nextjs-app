@@ -16,7 +16,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 
 const testImage = fs.readFileSync(path.resolve(__dirname, './assets/test.jpg'));
-const requiredServerFilesPath = path.resolve(__dirname, './required-server-files.json');
+const requiredServerFilesPath = path.resolve(__dirname, './assets/app/.next/required-server-files.json');
 
 const mockImageDownloadHandler: NextJsImageDownloadHandler = async (_: IncomingMessage, res: ServerResponse) => {
   res.statusCode = 200;
@@ -136,10 +136,11 @@ describe('NextJs Image Lambda', async () => {
       isBase64Encoded: false
     };
 
-    process.env.NEXT_REQUIRED_SERVER_FILES = requiredServerFilesPath;
-    process.env.NEXT_BUILD_BUCKET = bucket;
-
-    const handler = createNextImageHandler(context.s3Client);
+    const handler = createNextImageHandler({
+      dir: path.resolve(__dirname, 'assets/app'),
+      bucket,
+      s3Client: context.s3Client
+    });
     const response = await handler(event, null as any, null as any);
     const imageBuffer = Buffer.from(response.body!, 'base64');
     const imageMeta = await sharp(imageBuffer).metadata();
