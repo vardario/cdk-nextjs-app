@@ -22,7 +22,8 @@ import {
   LAMBDA_ARCHITECTURE,
   LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
   LAMBDA_ESBUILD_TARGET,
-  LAMBDA_RUNTIME
+  LAMBDA_RUNTIME,
+  hashFolder
 } from './stack-utils';
 import { IMAGE_ENDPOINT, SERVER_ENDPOINT } from './utils';
 
@@ -113,11 +114,11 @@ export class NextJsApp extends Construct {
 
     this.stackProps = stackProps;
 
-    if (!fs.existsSync(stackProps.nextJsPath)) {
+    if (!fs.existsSync(stackProps.nextJsPath) || !fs.lstatSync(stackProps.nextJsPath).isDirectory()) {
       throw new Error('Next build folder not found. Did you forgot to build ?');
     }
 
-    this.buildId = fs.readFileSync(path.resolve(stackProps.nextJsPath, '.next/BUILD_ID')).toString('utf-8');
+    this.buildId = hashFolder(stackProps.nextJsPath);
 
     const staticAssetsBucket = this.createStaticAssetsBucket(
       (stackProps.domain && stackProps.domain.name) || undefined
@@ -147,7 +148,7 @@ export class NextJsApp extends Construct {
 
     const serverLayerVersion = new lambda.LayerVersion(this, 'NextJsDeploymentLayer', {
       code: lambda.Code.fromAsset(this.stackProps.nextJsPath, {
-        exclude: ['**', '*.', '!.next', '!.next/*', '!.next/**/*', '.next/cache']
+        exclude: ['**', '*.', '!.next', '!.next/*', '!.next/**/*', '.next/cache', '.next/static/media']
       })
     });
 
@@ -279,17 +280,23 @@ export class NextJsApp extends Construct {
       : undefined;
 
     const nextServerCachePolicy = new cf.CachePolicy(this, 'NextServerCachePolicy', {
-      comment: 'NextJS 13 Server optimized',
+      comment: 'NextJS 14 Server optimized',
       queryStringBehavior: cf.CacheQueryStringBehavior.none(),
       cookieBehavior: cf.CacheCookieBehavior.none(),
-      headerBehavior: cf.CacheHeaderBehavior.allowList('RSC', ...(this.stackProps.allowedCacheHeaders || [])),
+      headerBehavior: cf.CacheHeaderBehavior.allowList(
+        'RSC',
+        'Next-Router-Prefetch',
+        'Next-Router-State-Tree',
+        'Next-Url',
+        ...(this.stackProps.allowedCacheHeaders || [])
+      ),
       enableAcceptEncodingGzip: true,
       enableAcceptEncodingBrotli: true,
       defaultTtl: cdk.Duration.days(365)
     });
 
     const nextImageCachePolicy = new cf.CachePolicy(this, 'NextImageCachePolicy', {
-      comment: 'NextJS 13 image optimized',
+      comment: 'NextJS 14 image optimized',
       queryStringBehavior: cf.CacheQueryStringBehavior.all(),
       enableAcceptEncodingGzip: true,
       defaultTtl: cdk.Duration.days(30)
