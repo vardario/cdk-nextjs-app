@@ -3,6 +3,7 @@ import http from 'node:http';
 import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 
 const EXCLUDED_RESPONSE_HEADERS = ['content-encoding', 'connection', 'keep-alive', 'transfer-encoding'];
+const EXCLUDED_REQUEST_HEADERS = ['host', 'content-length', 'connection', 'accept-encoding', 'origin'];
 
 export type Handler = (event: APIGatewayProxyEventV2) => Promise<APIGatewayProxyStructuredResultV2>;
 
@@ -35,19 +36,31 @@ export function createNextServerHandler({ dir, basePath }: CreateNextServerHandl
       server = await createNextServer();
     }
 
-    const response = await fetch(`http://localhost:3000/${event.rawPath}`);
-    const headers: Record<string, string> = {};
+    const requestHeaders = new Headers();
 
-    response.headers.forEach((value, key) => {
-      headers[key] = value;
+    Object.entries(event.headers).forEach(([key, value]) => {
+      value && !EXCLUDED_REQUEST_HEADERS.includes(key) && requestHeaders.set(key, value);
     });
 
-    EXCLUDED_RESPONSE_HEADERS.forEach(header => delete headers[header]);
+    const requestInit: RequestInit = {
+      headers: requestHeaders,
+      method: event.requestContext.http.method,
+      body: event.body
+    };
+
+    const response = await fetch(`http://localhost:3000/${event.rawPath}`, requestInit);
+    const responseHeaders: Record<string, string> = {};
+
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
+    EXCLUDED_RESPONSE_HEADERS.forEach(header => delete responseHeaders[header]);
 
     return {
       statusCode: response.status,
       body: await response.text(),
-      headers
+      headers: responseHeaders
     };
   };
 
