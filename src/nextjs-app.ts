@@ -148,7 +148,7 @@ export class NextJsApp extends Construct {
 
     const serverLayerVersion = new lambda.LayerVersion(this, 'NextJsDeploymentLayer', {
       code: lambda.Code.fromAsset(this.stackProps.nextJsPath, {
-        exclude: ['**', '*.', '!.next', '!.next/*', '!.next/**/*', '.next/cache', '.next/static/media']
+        exclude: ['**', '*.', '!.next', '!.next/*', '!.next/**/*', '.next/cache', '.next/static/media', 'BUILD_ID']
       })
     });
 
