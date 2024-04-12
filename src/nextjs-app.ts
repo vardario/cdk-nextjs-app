@@ -22,8 +22,7 @@ import {
   LAMBDA_ARCHITECTURE,
   LAMBDA_ESBUILD_EXTERNAL_AWS_SDK,
   LAMBDA_ESBUILD_TARGET,
-  LAMBDA_RUNTIME,
-  hashFolder
+  LAMBDA_RUNTIME
 } from './stack-utils';
 import { IMAGE_ENDPOINT, SERVER_ENDPOINT } from './utils';
 
@@ -104,7 +103,7 @@ const NEXT_APP_PATH = '/opt';
 
 export class NextJsApp extends Construct {
   private readonly stackProps: NextJsAppProps;
-  private readonly buildId: string;
+
   public readonly appUrl: string;
   public readonly cloudFrontUrl: string;
   public readonly cloudfrontDistribution: cf.Distribution;
@@ -117,8 +116,6 @@ export class NextJsApp extends Construct {
     if (!fs.existsSync(stackProps.nextJsPath) || !fs.lstatSync(stackProps.nextJsPath).isDirectory()) {
       throw new Error('Next build folder not found. Did you forgot to build ?');
     }
-
-    this.buildId = hashFolder(stackProps.nextJsPath);
 
     const staticAssetsBucket = this.createStaticAssetsBucket(
       (stackProps.domain && stackProps.domain.name) || undefined
@@ -355,15 +352,6 @@ export class NextJsApp extends Construct {
         cachePolicy: nextServerCachePolicy
       },
       additionalBehaviors
-    });
-
-    new s3d.BucketDeployment(this, 'NextJsInvalidationDeployment', {
-      destinationBucket: staticAssetsBucket,
-      destinationKeyPrefix: '/',
-      sources: [s3d.Source.data('BUILD_ID', this.buildId)],
-      prune: false,
-      distribution: cloudfrontDistribution,
-      distributionPaths: ['/*']
     });
 
     this.stackProps.domain &&
