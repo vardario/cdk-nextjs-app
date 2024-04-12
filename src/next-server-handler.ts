@@ -55,6 +55,10 @@ export function createNextServerHandler({ dir, basePath }: CreateNextServerHandl
       responseHeaders[key] = value;
     });
 
+    if (responseHeaders['cache-control'] === 's-maxage=31536000, stale-while-revalidate') {
+      responseHeaders['cache-control'] = 'public, max-age=0, must-revalidate';
+    }
+
     EXCLUDED_RESPONSE_HEADERS.forEach(header => delete responseHeaders[header]);
 
     return {
