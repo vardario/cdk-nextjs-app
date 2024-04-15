@@ -242,13 +242,15 @@ export class NextJsApp extends Construct {
       destinationKeyPrefix: '_next/static',
       sources: [s3d.Source.asset(staticPath)],
       prune: false,
-      cacheControl: [s3d.CacheControl.fromString('public, max-age=315360000, immutable')]
+      cacheControl: [s3d.CacheControl.fromString('public, max-age=315360000, immutable')],
+      memoryLimit: 1024
     });
 
     new s3d.BucketDeployment(this, 'NextJsPublicAssetsDeployment', {
       destinationBucket: staticAssetsBucket,
       sources: [s3d.Source.asset(publicPath)],
-      prune: false
+      prune: false,
+      memoryLimit: 1024
     });
 
     return staticAssetsBucket;
