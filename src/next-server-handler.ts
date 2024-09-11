@@ -1,39 +1,47 @@
 import next from 'next';
-import http from 'node:http';
+import http, { IncomingMessage, ServerResponse } from 'node:http';
 import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import { NextServer } from 'next/dist/server/next';
 
 const EXCLUDED_RESPONSE_HEADERS = ['content-encoding', 'connection', 'keep-alive', 'transfer-encoding'];
 const EXCLUDED_REQUEST_HEADERS = ['host', 'content-length', 'connection', 'accept-encoding', 'origin'];
 
 export type Handler = (event: APIGatewayProxyEventV2) => Promise<APIGatewayProxyStructuredResultV2>;
 
+const createHttpServer = async (handler: (req: IncomingMessage, res: ServerResponse) => void) => {
+  return new Promise<http.Server>((resolve, reject) => {
+    const server = http.createServer(handler);
+    server.listen(undefined, () => {
+      resolve(server);
+    });
+    server.on('error', reject);
+  });
+};
+
 export interface CreateNextServerHandlerProps {
   dir: string;
   basePath?: string;
 }
 
+let nextServer: NextServer | undefined;
+
 export function createNextServerHandler({ dir, basePath }: CreateNextServerHandlerProps): Handler {
   const createNextServer = async () => {
-    return new Promise<http.Server>((resolve, reject) => {
-      const app = next({ dev: false, dir });
-      app
+    return new Promise<NextServer>((resolve, reject) => {
+      const nextServer = next({ dev: false, dir });
+      nextServer
         .prepare()
         .then(() => {
-          const server = http.createServer(app.getRequestHandler());
-          server.listen(3000, () => {
-            resolve(server);
-          });
+          resolve(nextServer);
         })
         .catch(reject);
     });
   };
 
-  let server: http.Server | undefined;
-
   const handler: Handler = async event => {
     event.rawPath = event.rawPath.replace(basePath || '', '');
-    if (!server) {
-      server = await createNextServer();
+    if (!nextServer) {
+      nextServer = await createNextServer();
     }
 
     const requestHeaders = new Headers();
@@ -48,7 +56,14 @@ export function createNextServerHandler({ dir, basePath }: CreateNextServerHandl
       body: event.body
     };
 
-    const response = await fetch(`http://localhost:3000/${event.rawPath}`, requestInit);
+    const server = await createHttpServer(nextServer.getRequestHandler());
+    const address = server.address();
+
+    if (address === null || typeof address === 'string') {
+      throw new Error('Server address is not available');
+    }
+    const response = await fetch(`http://localhost:${address.port}/${event.rawPath}`, requestInit);
+    await server.close();
     const responseHeaders: Record<string, string> = {};
 
     response.headers.forEach((value, key) => {
